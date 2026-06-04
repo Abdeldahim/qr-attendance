@@ -1,0 +1,6 @@
+{% extends "base/base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<div class="alert alert-danger">{{message}}</div>
+<a href="/dashboard/" class="btn btn-primary">← Go to Dashboard</a>
+{% endblock %}

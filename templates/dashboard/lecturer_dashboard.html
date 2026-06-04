@@ -1,0 +1,97 @@
+{% extends "base/base.html" %}
+{% block title %}Lecturer Dashboard{% endblock %}
+{% block page_title %}Lecturer Dashboard{% endblock %}
+{% block page_subtitle %}{{lecturer.title}} {{lecturer.user.get_full_name}} — {{lecturer.department.name}}{% endblock %}
+{% block sidebar_nav %}
+<span class="nav-section-label">Main</span>
+<a href="/dashboard/lecturer/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+<span class="nav-section-label">Attendance</span>
+<a href="/dashboard/lecturer/" class="nav-item" id="my-courses-link"><span class="nav-icon">📚</span> My Courses</a>
+{% for s in active_sessions %}<a href="/attendance/session/{{s.session_id}}/" class="nav-item"><span class="nav-icon">⚡</span> {{s.course.code}} <span class="nav-badge">LIVE</span></a>{% endfor %}
+{% endblock %}
+{% block content %}
+{% if active_sessions %}
+<div class="alert alert-info mb-4">⚡ You have {{active_sessions|length}} active session(s) running. <a href="/attendance/session/{{active_sessions.0.session_id}}/">View live →</a></div>
+{% endif %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-icon blue">📚</div><div class="stat-info"><div class="stat-value">{{total_courses}}</div><div class="stat-label">My Courses</div></div></div>
+  <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-value">{{total_sessions}}</div><div class="stat-label">Sessions Held</div></div></div>
+  <div class="stat-card"><div class="stat-icon teal">⚡</div><div class="stat-info"><div class="stat-value" style="color:var(--accent)">{{active_sessions|length}}</div><div class="stat-label">Active Now</div></div></div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><span class="card-title">My Courses</span></div>
+  <div class="table-wrapper"><table><thead><tr><th>Code</th><th>Course Name</th><th>Enrolled</th><th>Sessions</th><th>Action</th></tr></thead><tbody>
+  {% for c in courses %}
+  <tr>
+    <td><strong>{{c.code}}</strong></td>
+    <td>{{c.name}}<br><span class="text-muted text-small">{{c.department.name}}</span></td>
+    <td>{{c.enrolled_count}}</td>
+    <td>{{c.session_count}}</td>
+    <td>
+      <button class="btn btn-accent btn-sm" onclick="startSession({{c.pk}},'{{c.code}}')">▶ Start Session</button>
+      <a href="/api/reports/course/{{c.pk}}/pdf/" class="btn btn-outline btn-sm" target="_blank">PDF</a>
+      <a href="/api/reports/course/{{c.pk}}/excel/" class="btn btn-outline btn-sm" target="_blank">Excel</a>
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="5" class="text-center text-muted">No courses assigned yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="card-title">Recent Sessions</span></div>
+  <div class="table-wrapper"><table><thead><tr><th>Session ID</th><th>Course</th><th>Date</th><th>Present</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for s in recent_sessions %}<tr>
+    <td><code>{{s.session_id}}</code></td>
+    <td>{{s.course.code}}</td>
+    <td>{{s.started_at|date:"d M Y H:i"}}</td>
+    <td>{{s.total_present}}/{{s.total_enrolled}}</td>
+    <td><span class="badge {% if s.status == 'ACTIVE' %}badge-active{% elif s.status == 'COMPLETED' %}badge-success{% else %}badge-warning{% endif %}">{{s.status}}</span></td>
+    <td>{% if s.status == 'ACTIVE' %}<a href="/attendance/session/{{s.session_id}}/" class="btn btn-sm btn-primary">Manage</a>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="6" class="text-center text-muted">No sessions yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<!-- Start Session Modal -->
+<div id="session-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
+  <div class="card" style="width:420px;margin:auto;">
+    <div class="card-header"><span class="card-title">Start Attendance Session</span><button onclick="document.getElementById('session-modal').style.display='none'" class="btn btn-ghost btn-sm">✕</button></div>
+    <div class="card-body">
+      <div id="modal-error" class="alert alert-danger" style="display:none"></div>
+      <div class="form-group"><label class="form-label">Course</label><input id="modal-course-name" class="form-control" readonly></div>
+      <div class="form-group"><label class="form-label">Room (optional)</label><input id="modal-room" class="form-control" placeholder="e.g. Room 201"></div>
+      <div class="form-group"><label class="form-label">QR Expiry (seconds)</label>
+        <input type="range" id="modal-expiry" min="30" max="300" value="60" style="width:100%" oninput="document.getElementById('expiry-val').textContent=this.value+'s'">
+        <span id="expiry-val">60s</span>
+      </div>
+      <input type="hidden" id="modal-course-id">
+      <button class="btn btn-accent w-100" onclick="confirmStart()">▶ Start Session</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function startSession(courseId, courseCode) {
+  document.getElementById('modal-course-id').value = courseId;
+  document.getElementById('modal-course-name').value = courseCode;
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('session-modal').style.display = 'flex';
+}
+async function confirmStart() {
+  const courseId = document.getElementById('modal-course-id').value;
+  const room = document.getElementById('modal-room').value;
+  const expiry = document.getElementById('modal-expiry').value;
+  try {
+    const res = await fetch('/api/attendance/sessions/start/', {
+      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({course_id:courseId, room, qr_expiry_seconds:expiry})
+    });
+    const data = await res.json();
+    if (res.ok) { window.location.href = `/attendance/session/${data.session_id}/`; }
+    else { document.getElementById('modal-error').textContent = data.error; document.getElementById('modal-error').style.display='block'; }
+  } catch(e) { document.getElementById('modal-error').textContent='Network error'; document.getElementById('modal-error').style.display='block'; }
+}
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+</script>
+{% endblock %}

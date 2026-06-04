@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+{% block page_subtitle %}{{student.student_id}} — {{student.user.get_full_name}}{% endblock %}
+{% block sidebar_nav %}
+<span class="nav-section-label">Main</span>
+<a href="/dashboard/student/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+<a href="/attendance/scan/" class="nav-item"><span class="nav-icon">📷</span> Scan QR Code</a>
+{% endblock %}
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-icon teal">📊</div><div class="stat-info"><div class="stat-value" style="color:{% if overall_pct >= 75 %}var(--success){% elif overall_pct >= 60 %}var(--warning){% else %}var(--danger){% endif %}">{{overall_pct}}%</div><div class="stat-label">Overall Attendance</div></div></div>
+  <div class="stat-card"><div class="stat-icon blue">📚</div><div class="stat-info"><div class="stat-value">{{total_courses}}</div><div class="stat-label">Enrolled Courses</div></div></div>
+  <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-value">{{overall_attended}}</div><div class="stat-label">Classes Attended</div></div></div>
+  <div class="stat-card"><div class="stat-icon orange">📅</div><div class="stat-info"><div class="stat-value">{{overall_sessions}}</div><div class="stat-label">Total Classes</div></div></div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><span class="card-title">Attendance by Course</span>
+    <a href="/attendance/scan/" class="btn btn-accent btn-sm">📷 Scan QR</a>
+  </div>
+  <div class="table-wrapper"><table><thead><tr><th>Course</th><th>Total Classes</th><th>Attended</th><th>Percentage</th><th>Status</th></tr></thead><tbody>
+  {% for s in course_stats %}<tr>
+    <td><strong>{{s.course.code}}</strong><br><span class="text-muted text-small">{{s.course.name}}</span></td>
+    <td>{{s.total_sessions}}</td>
+    <td>{{s.attended}}</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+          <div style="width:{{s.percentage}}%;height:100%;background:{% if s.status == 'good' %}var(--success){% elif s.status == 'warning' %}var(--warning){% else %}var(--danger){% endif %};border-radius:4px;"></div>
+        </div>
+        <span style="font-weight:600;color:{% if s.status == 'good' %}var(--success){% elif s.status == 'warning' %}var(--warning){% else %}var(--danger){% endif %}">{{s.percentage}}%</span>
+      </div>
+    </td>
+    <td><span class="badge {% if s.status == 'good' %}badge-success{% elif s.status == 'warning' %}badge-warning{% else %}badge-danger{% endif %}">{% if s.status == 'good' %}Good{% elif s.status == 'warning' %}At Risk{% else %}Critical{% endif %}</span></td>
+  </tr>{% empty %}<tr><td colspan="5" class="text-center text-muted">No courses enrolled.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="card-title">Recent Attendance</span></div>
+  <div class="table-wrapper"><table><thead><tr><th>Date</th><th>Course</th><th>Session</th><th>Status</th></tr></thead><tbody>
+  {% for r in recent_records %}<tr>
+    <td>{{r.recorded_at|date:"d M Y H:i"}}</td>
+    <td>{{r.course.code}}</td>
+    <td><code>{{r.session.session_id}}</code></td>
+    <td><span class="badge {% if r.status == 'PRESENT' %}badge-success{% elif r.status == 'ABSENT' %}badge-danger{% elif r.status == 'LATE' %}badge-warning{% else %}badge-info{% endif %}">{{r.status}}</span></td>
+  </tr>{% empty %}<tr><td colspan="4" class="text-center text-muted">No attendance records yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

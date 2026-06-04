@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — UniAttend</title>
+{% load static %}
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #0A4D68; --primary-light: #1A7A9A; --accent: #00C9A7;
+  --danger: #E84040; --success: #27AE60; --warning: #F5A623;
+  --text: #0D1B2A; --text-muted: #5A7391; --border: #D0DAE8;
+  --surface: #FFFFFF; --bg: #F4F7FA; --radius: 12px;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: linear-gradient(135deg, #0A4D68 0%, #1A7A9A 50%, #00C9A7 100%);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.login-wrapper {
+  display: flex; width: 100%; max-width: 900px;
+  background: #fff; border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;
+}
+.login-left {
+  flex: 1; background: linear-gradient(160deg, #0A4D68, #1A7A9A);
+  padding: 48px 40px; color: #fff; display: flex; flex-direction: column; justify-content: center;
+}
+.logo-box {
+  width: 60px; height: 60px; background: rgba(255,255,255,0.2);
+  border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; margin-bottom: 24px;
+}
+.login-left h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+.login-left p { opacity: 0.7; font-size: 0.9rem; margin-bottom: 36px; }
+.feature { display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 16px; }
+.feature-icon { font-size: 1.3rem; }
+.feature-text strong { display: block; font-size: 0.9rem; }
+.feature-text span { font-size: 0.78rem; opacity: 0.7; }
+.login-right { width: 400px; padding: 48px 40px; display: flex; flex-direction: column; justify-content: center; }
+.login-right h2 { font-size: 1.6rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.login-right .subtitle { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 28px; }
+.form-group { margin-bottom: 18px; }
+label { display: block; font-weight: 600; font-size: 0.84rem; margin-bottom: 6px; color: var(--text); }
+input[type=text], input[type=password] {
+  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 0.95rem; font-family: inherit;
+  background: #f8fafc; color: var(--text); outline: none; transition: all 0.2s;
+}
+input[type=text]:focus, input[type=password]:focus {
+  border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(26,122,154,0.12); background: #fff;
+}
+.btn-login {
+  width: 100%; padding: 13px; background: var(--primary); color: #fff;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.2s; margin-top: 4px;
+}
+.btn-login:hover { background: var(--primary-light); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(10,77,104,0.3); }
+.btn-login:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+.alert {
+  padding: 11px 14px; border-radius: 10px; font-size: 0.875rem;
+  margin-bottom: 16px; display: none; align-items: center; gap: 8px;
+}
+.alert.show { display: flex; }
+.alert-danger { background: rgba(232,64,64,0.08); border: 1px solid rgba(232,64,64,0.25); color: #b91c1c; }
+.alert-warning { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.3); color: #92400e; }
+.divider { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 20px 0; position: relative; }
+.divider::before, .divider::after { content:''; position:absolute; top:50%; width:38%; height:1px; background:var(--border); }
+.divider::before { left:0; } .divider::after { right:0; }
+.demo-box { background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.2); border-radius: 12px; padding: 14px; }
+.demo-box h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); margin-bottom: 10px; }
+.cred-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-top: 1px solid rgba(0,201,167,0.12); }
+.cred-row:first-of-type { border-top: none; }
+.cred-label { font-weight: 600; font-size: 0.82rem; color: var(--text); }
+.cred-btn {
+  font-size: 0.75rem; background: rgba(10,77,104,0.07); border: 1px solid rgba(10,77,104,0.15);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--primary);
+  font-family: inherit; font-weight: 600; transition: all 0.15s;
+}
+.cred-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 700px) { .login-left { display: none; } .login-wrapper { max-width: 420px; } .login-right { width: 100%; padding: 36px 24px; } }
+</style>
+</head>
+<body>
+<div class="login-wrapper">
+  <div class="login-left">
+    <div class="logo-box">🎓</div>
+    <h1>UniAttend</h1>
+    <p>University QR Attendance Management System</p>
+    <div class="feature"><span class="feature-icon">📱</span><div class="feature-text"><strong>Scan & Attend</strong><span>Students scan QR in seconds</span></div></div>
+    <div class="feature"><span class="feature-icon">⚡</span><div class="feature-text"><strong>Real-Time Updates</strong><span>Live count without refresh</span></div></div>
+    <div class="feature"><span class="feature-icon">📊</span><div class="feature-text"><strong>PDF & Excel Reports</strong><span>Export attendance anytime</span></div></div>
+    <div class="feature"><span class="feature-icon">🔒</span><div class="feature-text"><strong>Secure & Audited</strong><span>JWT auth + audit logging</span></div></div>
+  </div>
+
+  <div class="login-right">
+    <h2>Welcome back</h2>
+    <p class="subtitle">Sign in to your university account</p>
+
+    {% if show_warning %}
+    <div class="alert alert-warning show">🔒 Please log in to access that page.</div>
+    {% endif %}
+
+    <div class="alert alert-danger" id="error-box">
+      <span>⚠️</span><span id="error-msg">Invalid username or password.</span>
+    </div>
+
+    <form id="login-form" novalidate>
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+      <input type="hidden" id="next-url" value="{{ next }}">
+      <button type="submit" class="btn-login" id="login-btn">
+        <span class="spinner" id="spinner"></span>
+        <span id="btn-text">Sign In →</span>
+      </button>
+    </form>
+
+    <div class="divider">Demo Credentials</div>
+    <div class="demo-box">
+      <h4>Click to auto-fill</h4>
+      <div class="cred-row"><span class="cred-label">🔧 Admin</span><button class="cred-btn" onclick="fill('admin','admin123')">admin / admin123</button></div>
+      <div class="cred-row"><span class="cred-label">🎙️ Lecturer</span><button class="cred-btn" onclick="fill('l001','lecturer123')">l001 / lecturer123</button></div>
+      <div class="cred-row"><span class="cred-label">🧑‍🎓 Student</span><button class="cred-btn" onclick="fill('stu001','student123')">stu001 / student123</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fill(u, p) {
+  document.getElementById('username').value = u;
+  document.getElementById('password').value = p;
+}
+
+// Get CSRF token from the hidden input Django renders
+function getCSRF() {
+  const el = document.querySelector('[name=csrfmiddlewaretoken]');
+  return el ? el.value : '';
+}
+
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const nextUrl  = document.getElementById('next-url').value;
+  const errorBox = document.getElementById('error-box');
+  const btn      = document.getElementById('login-btn');
+  const spinner  = document.getElementById('spinner');
+  const btnText  = document.getElementById('btn-text');
+
+  if (!username || !password) {
+    document.getElementById('error-msg').textContent = 'Please enter both username and password.';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  errorBox.classList.remove('show');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  btnText.textContent = 'Signing in...';
+
+  try {
+    const res = await fetch('/api/auth/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRF(),
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ username, password, next: nextUrl }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      window.location.href = data.redirect || '/dashboard/';
+    } else {
+      document.getElementById('error-msg').textContent = data.error || 'Login failed. Please try again.';
+      errorBox.classList.add('show');
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Sign In →';
+    }
+  } catch (err) {
+    document.getElementById('error-msg').textContent = 'Connection error. Is the server running?';
+    errorBox.classList.add('show');
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Sign In →';
+  }
+});
+</script>
+</body>
+</html>

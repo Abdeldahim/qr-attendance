@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan QR — UniAttend</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#F4F7FA;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(10,77,104,.12);width:100%;max-width:420px;overflow:hidden}
+.header{background:#0A4D68;color:#fff;padding:20px 24px;text-align:center}
+.header h1{font-size:1.2rem;font-weight:700}
+.header p{font-size:.85rem;opacity:.7;margin-top:4px}
+.body{padding:24px}
+.user-bar{display:flex;align-items:center;gap:10px;background:#EEF2F7;border-radius:10px;padding:12px 16px;margin-bottom:20px}
+.avatar{width:36px;height:36px;background:#0A4D68;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;flex-shrink:0}
+.result-box{border-radius:12px;padding:20px;text-align:center;margin-top:16px;display:none}
+.result-box.success{background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.3)}
+.result-box.error{background:rgba(232,64,64,.1);border:1px solid rgba(232,64,64,.3)}
+.result-icon{font-size:2.5rem;margin-bottom:8px}
+.result-title{font-size:1.1rem;font-weight:700}
+.result-title.success{color:#166534}
+.result-title.error{color:#b91c1c}
+.result-detail{font-size:.85rem;color:#5A7391;margin-top:6px}
+input.form-control{width:100%;padding:12px 16px;border:1.5px solid #D0DAE8;border-radius:10px;font-size:1rem;outline:none;margin-bottom:12px;font-family:inherit}
+input.form-control:focus{border-color:#1A7A9A;box-shadow:0 0 0 3px rgba(26,122,154,.12)}
+.btn{display:block;width:100%;padding:13px;background:#0A4D68;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn:hover{background:#1A7A9A}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-secondary{background:transparent;color:#0A4D68;border:1.5px solid #0A4D68;margin-top:8px}
+.btn-secondary:hover{background:#0A4D68;color:#fff}
+.divider{text-align:center;color:#8FA8C0;font-size:.8rem;margin:16px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:#D0DAE8}
+.divider::before{left:0}.divider::after{right:0}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+{% load static %}
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>📷 Scan Attendance QR</h1>
+    <p>Enter the QR token shown by your lecturer</p>
+  </div>
+  <div class="body">
+    <div class="user-bar">
+      <div class="avatar">{{request.user.first_name.0}}{{request.user.last_name.0}}</div>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">{{request.user.get_full_name}}</div>
+        <div style="font-size:.75rem;color:#5A7391">{{request.user.student_profile.student_id}}</div>
+      </div>
+      <a href="/api/auth/logout/" onclick="doLogout(event)" style="margin-left:auto;font-size:.8rem;color:#5A7391">Logout</a>
+    </div>
+
+    <div id="manual-section">
+      <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:6px">QR Token</label>
+      <input type="text" id="token-input" class="form-control" placeholder="Paste token here (e.g. abc123...)"
+        value="{{token}}" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn" id="submit-btn" onclick="submitToken()">Mark My Attendance</button>
+    </div>
+
+    <div class="divider">or scan with camera</div>
+    <button class="btn btn-secondary" onclick="startCamera()" id="camera-btn">📷 Open Camera Scanner</button>
+
+    <div id="camera-section" style="display:none;margin-top:16px">
+      <video id="camera-video" style="width:100%;border-radius:10px;background:#000" autoplay playsinline></video>
+      <canvas id="camera-canvas" style="display:none"></canvas>
+      <button class="btn btn-secondary" onclick="stopCamera()" style="margin-top:8px">✕ Close Camera</button>
+    </div>
+
+    <div id="result-box" class="result-box">
+      <div class="result-icon" id="result-icon"></div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="btn" style="margin-top:16px" onclick="resetForm()">Scan Another</button>
+      <a href="/dashboard/student/" class="btn btn-secondary" style="display:block;margin-top:8px;padding:13px;text-align:center">Go to Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-submit if token passed in URL
+window.addEventListener('load', () => {
+  const token = document.getElementById('token-input').value.trim();
+  if (token) submitToken();
+});
+
+async function submitToken() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) { alert('Please enter or scan a QR token.'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Recording...';
+  try {
+    const res = await fetch('/api/attendance/scan/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({qr_token: token})
+    });
+    const data = await res.json();
+    showResult(res.ok, data);
+  } catch(e) {
+    showResult(false, {error:'Network error. Please try again.'});
+  }
+  btn.disabled = false;
+  btn.textContent = 'Mark My Attendance';
+}
+
+function showResult(ok, data) {
+  document.getElementById('manual-section').style.display = 'none';
+  document.getElementById('camera-btn').style.display = 'none';
+  stopCamera();
+  const box = document.getElementById('result-box');
+  box.style.display = 'block';
+  box.className = 'result-box ' + (ok ? 'success' : 'error');
+  document.getElementById('result-icon').textContent = ok ? '✅' : '❌';
+  const title = document.getElementById('result-title');
+  title.textContent = ok ? 'Attendance Recorded!' : 'Not Recorded';
+  title.className = 'result-title ' + (ok ? 'success' : 'error');
+  document.getElementById('result-detail').textContent = ok
+    ? `${data.course} — ${data.course_code}\nSession: ${data.session_id}`
+    : (data.error || 'Something went wrong.');
+}
+
+function resetForm() {
+  document.getElementById('result-box').style.display = 'none';
+  document.getElementById('manual-section').style.display = 'block';
+  document.getElementById('camera-btn').style.display = 'block';
+  document.getElementById('token-input').value = '';
+}
+
+// ── Camera QR scanning ──
+let stream = null;
+let scanLoop = null;
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const video = document.getElementById('camera-video');
+    video.srcObject = stream;
+    document.getElementById('camera-section').style.display = 'block';
+    document.getElementById('camera-btn').style.display = 'none';
+    scanLoop = setInterval(captureFrame, 500);
+  } catch(e) { alert('Camera access denied or unavailable.'); }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  clearInterval(scanLoop);
+  document.getElementById('camera-section').style.display = 'none';
+}
+
+function captureFrame() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  // Use BarcodeDetector if available
+  if ('BarcodeDetector' in window) {
+    const bd = new BarcodeDetector({formats:['qr_code']});
+    bd.detect(canvas).then(codes => {
+      if (codes.length > 0) {
+        stopCamera();
+        const raw = codes[0].rawValue;
+        // Parse UNIATTEND|token|... format
+        const parts = raw.split('|');
+        const token = parts.length >= 2 ? parts[1] : raw;
+        document.getElementById('token-input').value = token;
+        submitToken();
+      }
+    }).catch(()=>{});
+  }
+}
+
+async function doLogout(e) {
+  e.preventDefault();
+  await fetch('/api/auth/logout/', {method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}});
+  window.location.href = '/accounts/login/';
+}
+
+function getCookie(n){const v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+</script>
+</body>
+</html>

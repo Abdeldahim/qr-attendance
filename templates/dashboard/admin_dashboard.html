@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block page_subtitle %}University-wide overview{% endblock %}
+{% block sidebar_nav %}
+<span class="nav-section-label">Main</span>
+<a href="/dashboard/admin/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+<a href="/admin/" class="nav-item"><span class="nav-icon">⚙️</span> System Admin</a>
+<span class="nav-section-label">Management</span>
+<a href="/admin/accounts/user/" class="nav-item"><span class="nav-icon">👥</span> Users</a>
+<a href="/admin/courses/department/" class="nav-item"><span class="nav-icon">🏛️</span> Departments</a>
+<a href="/admin/courses/course/" class="nav-item"><span class="nav-icon">📚</span> Courses</a>
+<a href="/admin/courses/student/" class="nav-item"><span class="nav-icon">🧑‍🎓</span> Students</a>
+<a href="/admin/courses/lecturer/" class="nav-item"><span class="nav-icon">🎙️</span> Lecturers</a>
+<span class="nav-section-label">Reports</span>
+<a href="/admin/attendance/attendancesession/" class="nav-item"><span class="nav-icon">📋</span> Sessions</a>
+<a href="/admin/core/auditlog/" class="nav-item"><span class="nav-icon">🔍</span> Audit Log</a>
+{% endblock %}
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-icon teal">🧑‍🎓</div><div class="stat-info"><div class="stat-value">{{total_students}}</div><div class="stat-label">Students</div></div></div>
+  <div class="stat-card"><div class="stat-icon blue">🎙️</div><div class="stat-info"><div class="stat-value">{{total_lecturers}}</div><div class="stat-label">Lecturers</div></div></div>
+  <div class="stat-card"><div class="stat-icon orange">📚</div><div class="stat-info"><div class="stat-value">{{total_courses}}</div><div class="stat-label">Courses</div></div></div>
+  <div class="stat-card"><div class="stat-icon green">🏛️</div><div class="stat-info"><div class="stat-value">{{total_departments}}</div><div class="stat-label">Departments</div></div></div>
+  <div class="stat-card"><div class="stat-icon teal">⚡</div><div class="stat-info"><div class="stat-value" style="color:var(--accent)">{{active_sessions}}</div><div class="stat-label">Active Sessions</div></div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+<div class="card"><div class="card-header"><span class="card-title">Departments</span></div>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Name</th><th>Courses</th><th>Students</th></tr></thead><tbody>
+{% for d in departments %}<tr><td><strong>{{d.code}}</strong></td><td>{{d.name}}</td><td>{{d.course_count}}</td><td>{{d.student_count}}</td></tr>{% empty %}<tr><td colspan="4" class="text-center text-muted">No departments</td></tr>{% endfor %}
+</tbody></table></div></div>
+<div class="card"><div class="card-header"><span class="card-title">Recent Sessions</span></div>
+<div class="table-wrapper"><table><thead><tr><th>Session</th><th>Course</th><th>Status</th><th>Present</th></tr></thead><tbody>
+{% for s in recent_sessions %}<tr><td><code>{{s.session_id}}</code></td><td>{{s.course.code}}</td><td><span class="badge {% if s.status == 'ACTIVE' %}badge-active{% elif s.status == 'COMPLETED' %}badge-success{% else %}badge-danger{% endif %}">{{s.status}}</span></td><td>{{s.total_present}}/{{s.total_enrolled}}</td></tr>{% empty %}<tr><td colspan="4" class="text-center text-muted">No sessions yet</td></tr>{% endfor %}
+</tbody></table></div></div>
+</div>
+{% endblock %}

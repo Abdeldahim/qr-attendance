@@ -1,0 +1,36 @@
+# University QR Attendance System — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# Core framework
+django==4.2.16
+djangorestframework==3.14.0
+
+# Authentication
+djangorestframework-simplejwt==5.3.0
+
+# CORS
+django-cors-headers==4.3.1
+
+# Filtering
+django-filter==23.5
+
+# WebSockets / Channels
+channels==4.0.0
+daphne==4.0.0
+# channels-redis==4.1.0   # Uncomment for Redis in production
+
+# QR Code generation
+qrcode[pil]==7.4.2
+Pillow==10.2.0
+
+# PDF reports
+reportlab==4.1.0
+
+# Excel reports
+openpyxl==3.1.2
+
+# MySQL driver (for production — not needed for SQLite dev)
+# mysqlclient==2.2.4
+
+# Environment variables
+python-dotenv==1.0.0
