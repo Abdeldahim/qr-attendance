@@ -34,3 +34,4 @@ openpyxl==3.1.2
 
 # Environment variables
 python-dotenv==1.0.0
+gunicorn==21.2.0

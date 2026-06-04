@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get(
     'dev-secret-key-change-in-production-use-env-var'
 )
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,.railway.app').split(',')
 
 # ---------------------------------------------------------------------------
 # APPLICATIONS

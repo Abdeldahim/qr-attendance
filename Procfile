@@ -1,0 +1,1 @@
+web: python manage.py migrate && python manage.py seed_data && gunicorn attendance_system.wsgi --bind 0.0.0.0:$PORT
